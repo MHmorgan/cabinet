@@ -1,0 +1,22 @@
+[package]
+name = "cabinet"
+version = "1.0.0"
+authors = ["Magnus Hirth <magnus.hirth@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.41"
+async-std = "1.9.0"
+clap = "2.33.3"
+env_logger = "0.8.4"
+hex = "0.4.3"
+lazy_static = "1.4.0"
+mime_guess = "2.0.3"
+sha-1 = "0.9.6"
+
+actix-web = "3.3.2"
+
+serde = "1.0.126"
+serde_json = "1.0.64"
