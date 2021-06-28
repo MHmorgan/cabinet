@@ -34,7 +34,7 @@ Method | HTTP request | Description
 ------ | ------------ | -----------
 get | GET /boilerplates | Return the names of all boilerplates as a JSON array.
 get | GET /boilerplates/*path* | Return the boilerplate JSON object. Supports *If-Modified-Since*, *If-Unmodified-Since*, and *If-None-Match* headers.
-put | PUT /boilerplates/*path* | Upload a boilerplate, either creating a new or ovewriting an existing. Returns either *201 Created* or *204 No Content*. Supports *If-Unmodified-Since* and *If-Match* headers.
+put | PUT /boilerplates/*path* | Upload a boilerplate, either creating a new or ovewriting an existing. Returns either *201 Created* or *204 No Content*. Supports *If-Unmodified-Since* and *If-Match* headers. All files referenced in the boilerplate must be present on the server.
 delete | DELETE /boilerplates/*path* | Delete a boilerplate. Supports *If-Unmodified-Since* and *If-Match* headers.
 
 Boilerplate JSON object is a mapping of client side file path to server side file path:
