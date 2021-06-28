@@ -23,7 +23,7 @@ use actix_web::{
     delete, get, head, put, web, App, HttpRequest, HttpResponse, HttpServer, Result as AxResult,
 };
 use async_std::stream::StreamExt;
-use boilerplate::{dir_used_in_boilerplates, file_used_in_boilerplates, Boilerplate};
+use boilerplate::{all_boilerplates, dir_used_in_boilerplates, file_used_in_boilerplates, Boilerplate};
 use dir_entry::DirEntry;
 use file_entry::FileEntry;
 use std::fs;
@@ -68,6 +68,7 @@ async fn main() -> anyhow::Result<()> {
             .service(get_dir)
             .service(create_dir)
             .service(delete_dir)
+            .service(get_all_boilerplates)
             .service(get_boilerplate)
             .service(upload_boilerplate)
             .service(delete_boilerplate)
@@ -331,7 +332,14 @@ async fn delete_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
  *                                                                             *
  *******************************************************************************/
 
-#[get("/boilerplates/{boilerplate:.*}")]
+#[get("/boilerplates")]
+async fn get_all_boilerplates() -> AxResult<HttpResponse> {
+    let names = all_boilerplates().await?;
+    let mut resp = HttpResponse::Ok();
+    Ok(resp.json(&names))
+}
+
+#[get("/boilerplates/{boilerplate:.+}")]
 async fn get_boilerplate(
     web::Path(boilerplate): web::Path<String>,
     req: HttpRequest,
