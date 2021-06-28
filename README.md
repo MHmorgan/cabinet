@@ -3,6 +3,11 @@ Cabinet
 
 The Cabinet file server.
 
+CLI
+---
+
+Start server: `cabinet <IP> <PORT> <ROOT>`
+
 API
 ---
 
