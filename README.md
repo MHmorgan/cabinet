@@ -16,7 +16,7 @@ API
 Method | HTTP request | Description
 ------ | ------------ | -----------
 get | GET /files/*path* | Returns the content of a file. Supports *If-Modified-Since*, *If-Unmodified-Since*, and *If-None-Match* headers.
-head | HEAD /file/*path* | Return the same headers as for GET, without the content.
+head | HEAD /files/*path* | Return the same headers as for GET, without the content.
 put | PUT /files/*path* | Upload a file, either creating a new file or overwriting an existing. Returns either *201 Created* or *204 No Content*. Supports *If-Unmodified-Since* and *If-Match* headers.
 delete | DELETE /files/*path* | Delete a file. Supports *If-Unmodified-Since* and *If-Match* headers. The file will not be deleted if it is used in a boilerplate.
 
