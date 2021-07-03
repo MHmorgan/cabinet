@@ -5,6 +5,7 @@ use std::fmt;
 use async_std::prelude::*;
 use async_std::fs;
 use async_std::io;
+use std::ffi::OsStr;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct DirEntry {
@@ -60,5 +61,23 @@ impl DirEntry {
 impl fmt::Display for DirEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
+    }
+}
+
+impl From<&OsStr> for DirEntry {
+    fn from(dir: &OsStr) -> Self {
+        DirEntry::new(dir.to_string_lossy())
+    }
+}
+
+impl From<&async_std::path::Path> for DirEntry {
+    fn from(dir: &async_std::path::Path) -> Self {
+        DirEntry::new(dir.to_string_lossy())
+    }
+}
+
+impl From<&std::path::Path> for DirEntry {
+    fn from(dir: &std::path::Path) -> Self {
+        DirEntry::new(dir.to_string_lossy())
     }
 }
