@@ -44,3 +44,8 @@ Boilerplate JSON object is a mapping of client side file path to server side fil
   "$HOME/.vimrc" : "configs/vimrc"
 }
 ```
+
+Clients
+-------
+
+* [commode](https://github.com/MHmorgan/commode)
