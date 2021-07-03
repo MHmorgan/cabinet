@@ -163,6 +163,10 @@ async fn file_meta(web::Path(file): web::Path<String>) -> AxResult<HttpResponse>
     if !entry.exists() {
         return Ok(not_found!("{}", &entry));
     }
+    // Return 400 if the entry isn't a file
+    if !entry.is_file() {
+        return Ok(bad_request!("not a file: {}", &entry));
+    }
     let mut resp = setup_file_headers(&entry, HttpResponse::Ok()).await?;
     Ok(resp.finish())
 }
@@ -184,6 +188,10 @@ async fn upload_file(
     } else {
         HttpResponse::Created()
     };
+    // Return 400 if the entry isn't a file
+    if entry.exists() && !entry.is_file() {
+        return Ok(bad_request!("not a file: {}", &entry));
+    }
     let headers: &HeaderMap = req.headers();
 
     // Check modified and ETAG header conditions only if the file already exists.
@@ -240,6 +248,10 @@ async fn delete_file(
     // Return 404 if entry doesn't exist
     if !entry.exists() {
         return Ok(not_found!());
+    }
+    // Return 400 if the entry isn't a file
+    if !entry.is_file() {
+        return Ok(bad_request!("not a file: {}", &entry));
     }
     let bps = file_used_in_boilerplates(&entry).await?;
     if bps.len() > 0 {
@@ -306,6 +318,10 @@ async fn create_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
     } else {
         HttpResponse::Created()
     };
+    // Return 400 if the entry isn't a directory
+    if entry.exists() && !entry.is_dir() {
+        return Ok(bad_request!("not a directory {}", &entry));
+    }
     entry.create().await?;
     Ok(resp.finish())
 }
@@ -316,6 +332,10 @@ async fn delete_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
     // Return 404 if the entry doesn't exist
     if !entry.exists() {
         return Ok(not_found!("{}", &entry));
+    }
+    // Return 400 if the entry isn't a directory
+    if !entry.is_dir() {
+        return Ok(bad_request!("not a directory {}", &entry));
     }
     let bps = dir_used_in_boilerplates(&entry).await?;
     if bps.len() > 0 {
