@@ -129,30 +129,25 @@ async fn get_file(web::Path(file): web::Path<String>, req: HttpRequest) -> AxRes
     let mut resp = setup_file_headers(&entry, HttpResponse::Ok()).await?;
 
     // If-Modified-Since condition
-    if let Some(val) = headers.get("If-Modified-Since") {
+    let modified_since = if let Some(val) = headers.get("If-Modified-Since") {
         let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if !entry.modified_since(date).await? {
-            return Ok(not_modified!(resp));
-        }
-    }
-
-    // If-Unmodified-Since condition
-    if let Some(val) = headers.get("If-Unmodified-Since") {
-        let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if entry.modified_since(date).await? {
-            return Ok(precondition_failed!());
-        }
-    }
-
+        entry.modified_since(date).await?
+    } else {
+        true
+    };
     // If-None-Match condition
-    if headers.contains_key("If-None-Match") {
+    let none_match = if headers.contains_key("If-None-Match") {
         let matches: bool = headers
             .get_all("If-None-Match")
-            .map(|e| e.to_str().unwrap())
+            .map(|e| e.to_str().unwrap().trim_matches('"'))
             .any(|e| e == &etag);
-        if !matches {
-            return Ok(not_modified!(resp));
-        }
+        !matches
+    } else {
+        true
+    };
+    // Only if both conditions fail will 304 Not Modified be returned
+    if !modified_since && !none_match {
+        return Ok(not_modified!(resp));
     }
 
     Ok(resp.body(entry.read().await?))
@@ -202,7 +197,7 @@ async fn upload_file(
         .map(DirEntry::from)
         .all(|p| !p.exists() || p.is_dir());
     if !ok {
-        return Ok(bad_request!("invalid file path: {}", &entry))
+        return Ok(bad_request!("invalid file path: {}", &entry));
     }
     // Create the file parents if they don't already exist
     match Path::new(&entry.name).parent() {
@@ -211,7 +206,7 @@ async fn upload_file(
             if !entry.exists() {
                 entry.create().await?
             }
-        },
+        }
         _ => (),
     };
     let headers: &HeaderMap = req.headers();
@@ -221,22 +216,27 @@ async fn upload_file(
         let etag = entry.content_hash().await?;
 
         // If-Unmodified-Since condition
-        if let Some(val) = headers.get("If-Unmodified-Since") {
+        let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
             let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-            if entry.modified_since(date).await? {
-                return Ok(precondition_failed!());
-            }
-        }
-
+            !entry.modified_since(date).await?
+        } else {
+            true
+        };
         // If-Match condition
-        if headers.contains_key("If-Match") {
+        let if_match = if headers.contains_key("If-Match") {
             let matches: bool = headers
                 .get_all("If-Match")
-                .map(|e| e.to_str().unwrap())
+                .map(|e| e.to_str().unwrap().trim_matches('"'))
                 .any(|e| e == &etag);
-            if !matches {
-                return Ok(precondition_failed!());
-            }
+            matches
+        } else {
+            true
+        };
+        // We don't care if the file has been modified as long as its content
+        // (content hash) is unchanged. But if the content has changed
+        // the precondition (if present) always fails.
+        if (!unmodified_since && !if_match) || !if_match {
+            return Ok(precondition_failed!());
         }
     }
 
@@ -284,22 +284,27 @@ async fn delete_file(
     let etag = entry.content_hash().await?;
 
     // If-Unmodified-Since condition
-    if let Some(val) = headers.get("If-Unmodified-Since") {
+    let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
         let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if entry.modified_since(date).await? {
-            return Ok(precondition_failed!());
-        }
-    }
-
+        !entry.modified_since(date).await?
+    } else {
+        true
+    };
     // If-Match condition
-    if headers.contains_key("If-Match") {
+    let if_match = if headers.contains_key("If-Match") {
         let matches: bool = headers
             .get_all("If-Match")
-            .map(|e| e.to_str().unwrap())
+            .map(|e| e.to_str().unwrap().trim_matches('"'))
             .any(|e| e == &etag);
-        if !matches {
-            return Ok(precondition_failed!());
-        }
+        matches
+    } else {
+        true
+    };
+    // We don't care if the file has been modified as long as its content
+    // (content hash) is unchanged. But if the content has changed
+    // the precondition (if present) always fails.
+    if (!unmodified_since && !if_match) || !if_match {
+        return Ok(precondition_failed!());
     }
 
     entry.remove().await?;
@@ -351,7 +356,7 @@ async fn create_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
         .map(DirEntry::from)
         .all(|p| !p.exists() || p.is_dir());
     if !ok {
-        return Ok(bad_request!("invalid directory path: {}", &entry))
+        return Ok(bad_request!("invalid directory path: {}", &entry));
     }
     entry.create().await?;
     Ok(resp.finish())
@@ -417,30 +422,25 @@ async fn get_boilerplate(
     resp.set(LastModified(meta.modified()?.into()));
 
     // If-Modified-Since condition
-    if let Some(val) = headers.get("If-Modified-Since") {
+    let modified_since = if let Some(val) = headers.get("If-Modified-Since") {
         let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if !bp.modified_since(date).await? {
-            return Ok(not_modified!(resp));
-        }
-    }
-
-    // If-Unmodified-Since condition
-    if let Some(val) = headers.get("If-Unmodified-Since") {
-        let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if bp.modified_since(date).await? {
-            return Ok(precondition_failed!());
-        }
-    }
-
+        bp.modified_since(date).await?
+    } else {
+        true
+    };
     // If-None-Match condition
-    if headers.contains_key("If-None-Match") {
+    let none_match = if headers.contains_key("If-None-Match") {
         let matches: bool = headers
             .get_all("If-None-Match")
-            .map(|e| e.to_str().unwrap())
+            .map(|e| e.to_str().unwrap().trim_matches('"'))
             .any(|e| e == &etag);
-        if !matches {
-            return Ok(not_modified!(resp));
-        }
+        !matches
+    } else {
+        true
+    };
+    // Only if both conditions fail will 304 Not Modified be returned
+    if !modified_since && !none_match {
+        return Ok(not_modified!(resp));
     }
 
     Ok(resp.json(&bp.files))
@@ -492,22 +492,27 @@ async fn upload_boilerplate(
         let etag = bp.content_hash().await?;
 
         // If-Unmodified-Since condition
-        if let Some(val) = headers.get("If-Unmodified-Since") {
+        let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
             let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-            if bp.modified_since(date).await? {
-                return Ok(precondition_failed!());
-            }
-        }
-
+            !bp.modified_since(date).await?
+        } else {
+            true
+        };
         // If-Match condition
-        if headers.contains_key("If-Match") {
+        let if_match = if headers.contains_key("If-Match") {
             let matches: bool = headers
                 .get_all("If-Match")
-                .map(|e| e.to_str().unwrap())
+                .map(|e| e.to_str().unwrap().trim_matches('"'))
                 .any(|e| e == &etag);
-            if !matches {
-                return Ok(precondition_failed!());
-            }
+            matches
+        } else {
+            true
+        };
+        // We don't care if the file has been modified as long as its content
+        // (content hash) is unchanged. But if the content has changed
+        // the precondition (if present) always fails.
+        if (!unmodified_since && !if_match) || !if_match {
+            return Ok(precondition_failed!());
         }
     }
 
@@ -535,22 +540,27 @@ async fn delete_boilerplate(
     let etag = bp.content_hash().await?;
 
     // If-Unmodified-Since condition
-    if let Some(val) = headers.get("If-Unmodified-Since") {
+    let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
         let date: SystemTime = val.to_str().unwrap().parse::<HttpDate>()?.into();
-        if bp.modified_since(date).await? {
-            return Ok(precondition_failed!());
-        }
-    }
-
+        !bp.modified_since(date).await?
+    } else {
+        true
+    };
     // If-Match condition
-    if headers.contains_key("If-Match") {
+    let if_match = if headers.contains_key("If-Match") {
         let matches: bool = headers
             .get_all("If-Match")
-            .map(|e| e.to_str().unwrap())
+            .map(|e| e.to_str().unwrap().trim_matches('"'))
             .any(|e| e == &etag);
-        if !matches {
-            return Ok(precondition_failed!());
-        }
+        matches
+    } else {
+        true
+    };
+    // We don't care if the file has been modified as long as its content
+    // (content hash) is unchanged. But if the content has changed
+    // the precondition (if present) always fails.
+    if (!unmodified_since && !if_match) || !if_match {
+        return Ok(precondition_failed!());
     }
 
     bp.remove().await?;
