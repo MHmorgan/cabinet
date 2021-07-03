@@ -23,7 +23,9 @@ use actix_web::{
     delete, get, head, put, web, App, HttpRequest, HttpResponse, HttpServer, Result as AxResult,
 };
 use async_std::stream::StreamExt;
-use boilerplate::{all_boilerplates, dir_used_in_boilerplates, file_used_in_boilerplates, Boilerplate};
+use boilerplate::{
+    all_boilerplates, dir_used_in_boilerplates, file_used_in_boilerplates, Boilerplate,
+};
 use dir_entry::DirEntry;
 use file_entry::FileEntry;
 use std::fs;
@@ -45,7 +47,8 @@ async fn main() -> anyhow::Result<()> {
         (@arg IP: +required "IP to bind server to.")
         (@arg PORT: +required "Port to listen on.")
         (@arg ROOT: +required "Root directory of server data.")
-    ).get_matches();
+    )
+    .get_matches();
 
     // Server setup
     let root = PathBuf::from(m.value_of("ROOT").unwrap());
@@ -180,6 +183,7 @@ async fn upload_file(
 ) -> AxResult<HttpResponse> {
     use actix_web::http::header::HttpDate;
     use actix_web::http::HeaderMap;
+    use async_std::path::Path;
     use std::time::SystemTime;
 
     let entry = FileEntry::new(file);
@@ -192,6 +196,24 @@ async fn upload_file(
     if entry.exists() && !entry.is_file() {
         return Ok(bad_request!("not a file: {}", &entry));
     }
+    // Sanity check: all parents must either not exist or be a directory
+    let ok = Path::new(&entry.name)
+        .iter()
+        .map(DirEntry::from)
+        .all(|p| !p.exists() || p.is_dir());
+    if !ok {
+        return Ok(bad_request!("invalid file path: {}", &entry))
+    }
+    // Create the file parents if they don't already exist
+    match Path::new(&entry.name).parent() {
+        Some(dir) => {
+            let entry = DirEntry::from(dir);
+            if !entry.exists() {
+                entry.create().await?
+            }
+        },
+        _ => (),
+    };
     let headers: &HeaderMap = req.headers();
 
     // Check modified and ETAG header conditions only if the file already exists.
@@ -312,6 +334,7 @@ async fn get_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse> {
 
 #[put("/dirs/{dir:.*}")]
 async fn create_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse> {
+    use async_std::path::Path;
     let entry = DirEntry::new(&dir);
     let mut resp = if entry.exists() {
         HttpResponse::NoContent()
@@ -321,6 +344,14 @@ async fn create_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
     // Return 400 if the entry isn't a directory
     if entry.exists() && !entry.is_dir() {
         return Ok(bad_request!("not a directory {}", &entry));
+    }
+    // Sanity check: all parents must either not exist or be a directory
+    let ok = Path::new(&entry.name)
+        .iter()
+        .map(DirEntry::from)
+        .all(|p| !p.exists() || p.is_dir());
+    if !ok {
+        return Ok(bad_request!("invalid directory path: {}", &entry))
     }
     entry.create().await?;
     Ok(resp.finish())
@@ -340,7 +371,10 @@ async fn delete_dir(web::Path(dir): web::Path<String>) -> AxResult<HttpResponse>
     let bps = dir_used_in_boilerplates(&entry).await?;
     if bps.len() > 0 {
         let names = bps.join("\n");
-        return Ok(bad_request!("directory is used in boilerplates:\n{}", names));
+        return Ok(bad_request!(
+            "directory is used in boilerplates:\n{}",
+            names
+        ));
     }
     entry.remove().await?;
     Ok(HttpResponse::NoContent().finish())
