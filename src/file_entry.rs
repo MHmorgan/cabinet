@@ -4,9 +4,9 @@
 use crate::common;
 use async_std::{fs, io, prelude::*};
 use mime_guess::{self, Mime};
+use std::fmt;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use std::fmt;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default)]
 pub struct FileEntry {
@@ -81,7 +81,13 @@ impl FileEntry {
     /// May fail during IO operations, reading file metadata and checking
     /// the modified field which isn't supported on all platforms.
     pub async fn modified_since(&self, t: SystemTime) -> io::Result<bool> {
-        let modified = self.modified().await?;
+        let t = t.duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        let modified = self
+            .modified()
+            .await?
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
         Ok(modified > t)
     }
 
