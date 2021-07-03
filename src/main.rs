@@ -226,6 +226,7 @@ async fn upload_file(
         let if_match = if headers.contains_key("If-Match") {
             let matches: bool = headers
                 .get_all("If-Match")
+                // ETAG values are enclosed in double quotes
                 .map(|e| e.to_str().unwrap().trim_matches('"'))
                 .any(|e| e == &etag);
             matches
@@ -432,6 +433,7 @@ async fn get_boilerplate(
     let none_match = if headers.contains_key("If-None-Match") {
         let matches: bool = headers
             .get_all("If-None-Match")
+            // ETAG values are enclosed in double quotes
             .map(|e| e.to_str().unwrap().trim_matches('"'))
             .any(|e| e == &etag);
         !matches
