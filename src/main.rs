@@ -192,12 +192,14 @@ async fn upload_file(
         return Ok(bad_request!("not a file: {}", &entry));
     }
     // Sanity check: all parents must either not exist or be a directory
-    let ok = Path::new(&entry.name)
-        .iter()
-        .map(DirEntry::from)
-        .all(|p| !p.exists() || p.is_dir());
-    if !ok {
-        return Ok(bad_request!("invalid file path: {}", &entry));
+    if let Some(p) = Path::new(&entry.name).parent() {
+        let ok = p
+            .iter()
+            .map(DirEntry::from)
+            .all(|p| !p.exists() || p.is_dir());
+        if !ok {
+            return Ok(bad_request!("invalid file path: {}", &entry));
+        }
     }
     // Create the file parents if they don't already exist
     match Path::new(&entry.name).parent() {
