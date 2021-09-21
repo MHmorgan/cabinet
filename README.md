@@ -16,9 +16,3 @@ Clients
 
 * [commode](https://github.com/MHmorgan/commode)
 
-Future improvements
--------------------
-
-If time allows...
-
-* Add file mode to boilerplate objects (will break clients)
