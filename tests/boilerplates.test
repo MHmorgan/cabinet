@@ -1,0 +1,177 @@
+
+package require tcltest
+package require http
+
+source common.tcl
+source tester.tcl
+
+namespace import common::*
+namespace import http::geturl
+namespace import tcltest::test
+
+start_cabinet
+try {
+
+array set boilerplate {
+  name  myboilerplate
+  path  boilerplates/myboilerplate
+  json  {{"$HOME/foo.txt":"bar/foo.txt",".zshrc":"zshrc"}}
+}
+
+array set files {
+  foo   files/bar/foo.txt
+  zshrc files/zshrc
+}
+
+# Use a large magic number to avoid worrying about time zones
+set newer_time [http_time [expr [clock seconds] + 360000]]
+set older_time [http_time [expr [clock seconds] - 360000]]
+
+
+# PUT request tests
+
+test boilerplate-put01-1.0 "PUT request, create boilerplate with non-existent files" boilerplates {
+  set tok [put $boilerplate(path) $boilerplate(json)]
+  http::ncode $tok
+} 400
+
+# Create test files required by the boilerplate
+foreach {_ file} [array get files] {
+  put $file
+}
+
+test boilerplate-put02-1.0 "PUT request, create boilerplate" boilerplates {
+  set tok [put $boilerplate(path) $boilerplate(json)]
+  http::ncode $tok
+} 201
+
+# This test must come before any header-tests which require the etag
+# of the boilerplate
+test boilerplate-get01-1.0 "GET request" boilerplates {
+  set tok [get $boilerplate(path)]
+  array set headers [http::meta $tok]
+  set boilerplate(modified) $headers(last-modified)
+  set boilerplate(etag)     $headers(etag)
+  array unset headers
+  http::ncode $tok
+} 200
+
+test boilerplate-put03-1.0 "PUT request, boilerplate already exists" boilerplates {
+  set tok [put $boilerplate(path) $boilerplate(json)]
+  http::ncode $tok
+} 204
+
+test boilerplate-put04-1.0 "PUT request, older unmodified since value" boilerplates {
+  set headers [list If-Unmodified-Since $older_time]
+  set tok [put $boilerplate(path) $boilerplate(json) $headers]
+  http::ncode $tok
+} 412
+
+test boilerplate-put05-1.0 "PUT request, newer unmodified since value" boilerplates {
+  set headers [list If-Unmodified-Since $newer_time]
+  set tok [put $boilerplate(path) $boilerplate(json) $headers]
+  http::ncode $tok
+} 204
+
+# Invalid test until the boilerplate etags are stable from v2
+#
+# test boilerplate-put06-1.0 "PUT request, valid match etag" boilerplates {
+#   set headers [list If-Match $boilerplate(etag)]
+#   set tok [put $boilerplate(path) $boilerplate(json) $headers]
+#   http::ncode $tok
+# } 204
+
+test boilerplate-put07-1.0 "PUT request, invalid match etag" boilerplates {
+  set headers [list If-Match {"aaaaaaaabbbbbbbbcccccccc0000111122223333"}]
+  set tok [put $boilerplate(path) $boilerplate(json) $headers]
+  http::ncode $tok
+} 412
+
+
+# GET request tests
+
+test boilerplate-get02-1.0 "GET request, all boilerplates" boilerplates {
+  set tok [get boilerplates]
+  set code [http::ncode $tok]
+  set body [http::data $tok]
+  return "$code $body"
+} "200 \[\"$boilerplate(name)\"\]"
+
+test boilerplate-get03-1.0 "GET request, non-existent boilerplate" boilerplates {
+  set tok [get boilerplates/idontexist]
+  http::ncode $tok
+} 404
+
+test boilerplate-get04-1.0 "GET request, older modified since value" boilerplates {
+  set headers [list If-Modified-Since $older_time]
+  set tok [get $boilerplate(path) $headers]
+  http::ncode $tok
+} 200
+
+test boilerplate-get05-1.0 "GET request, newer modified since value" boilerplates {
+  set headers [list If-Modified-Since $newer_time]
+  set tok [get $boilerplate(path) $headers]
+  http::ncode $tok
+} 304
+
+# Invalid test until the boilerplate etags are stable from v2
+test boilerplate-get06-1.0 "GET request, valid none match etag" invalid {
+  set headers [list If-Match $boilerplate(etag)]
+  set tok [get $boilerplate(path) $headers]
+  http::ncode $tok
+} 304
+
+test boilerplate-get07-1.0 "GET request, invalid none match etag" boilerplates {
+  set headers [list If-Match {"aaaaaaaabbbbbbbbcccccccc0000111122223333"}]
+  set tok [get $boilerplate(path) $headers]
+  http::ncode $tok
+} 200
+
+
+# DELETE request tests
+
+test boilerplate-delete01-1.0 "DELETE request, trying to delete a referenced file" boilerplates {
+  set tok [delete $files(foo)]
+  http::ncode $tok
+} 400
+
+test boilerplate-delete02-1.0 "DELETE request" boilerplates {
+  set tok [delete $boilerplate(path)]
+  http::ncode $tok
+} 204
+
+test boilerplate-delete03-1.0 "DELETE request, non-existent boilerplate" boilerplates {
+  set tok [delete $boilerplate(path)]
+  http::ncode $tok
+} 404
+
+test boilerplate-delete04-1.0 "DELETE request, older unmodified since value" boilerplates {
+  put $boilerplate(path) $boilerplate(json)
+  set headers [list If-Unmodified-Since $older_time]
+  set tok [delete $boilerplate(path) $headers]
+  http::ncode $tok
+} 412
+
+test boilerplate-delete04-1.0 "DELETE request, newer unmodified since value" boilerplates {
+  put $boilerplate(path) $boilerplate(json)
+  set headers [list If-Unmodified-Since $newer_time]
+  set tok [delete $boilerplate(path) $headers]
+  http::ncode $tok
+} 204
+
+# Invalid test until the boilerplate etags are stable from v2
+test boilerplate-delete05-1.0 "DELETE request, valid match etag" invalid {
+  put $boilerplate(path) $boilerplate(json)
+  set headers [list If-Match $boilerplate(etag)]
+  set tok [delete $boilerplate(path) $headers]
+  http::ncode $tok
+} 204
+
+test boilerplate-delete06-1.0 "DELETE request, invalid match etag" boilerplates {
+  put $boilerplate(path) $boilerplate(json)
+  set headers [list If-Match {"aaaaaaaabbbbbbbbcccccccc0000111122223333"}]
+  set tok [delete $boilerplate(path) $headers]
+  http::ncode $tok
+} 412
+
+} finally {teardown_cabinet}
