@@ -436,7 +436,7 @@ async fn get_boilerplate(
         true
     };
     // Only if both conditions fail will 304 Not Modified be returned
-    if !modified_since && !none_match {
+    if !modified_since || !none_match {
         return Ok(not_modified!(resp));
     }
 
@@ -505,10 +505,7 @@ async fn upload_boilerplate(
         } else {
             true
         };
-        // We don't care if the file has been modified as long as its content
-        // (content hash) is unchanged. But if the content has changed
-        // the precondition (if present) always fails.
-        if (!unmodified_since && !if_match) || !if_match {
+        if !unmodified_since || !if_match {
             return Ok(precondition_failed!());
         }
     }
@@ -556,7 +553,7 @@ async fn delete_boilerplate(
     // We don't care if the file has been modified as long as its content
     // (content hash) is unchanged. But if the content has changed
     // the precondition (if present) always fails.
-    if (!unmodified_since && !if_match) || !if_match {
+    if !unmodified_since || !if_match {
         return Ok(precondition_failed!());
     }
 
