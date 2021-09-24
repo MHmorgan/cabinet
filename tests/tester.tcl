@@ -25,7 +25,7 @@ proc start_cabinet {} {
   makeDirectory $cabinet_dir
   makeDirectory files $cabinet_dir
   makeDirectory boilerplates $cabinet_dir
-  set cabinet_pid [exec [cabinet_bin] $cabinet_host $cabinet_port $cabinet_dir >& $cabinet_log &]
+  set cabinet_pid [exec [cabinet_bin] $cabinet_host $cabinet_port $cabinet_dir >>& $cabinet_log &]
   log "Started cabinet server (PID $cabinet_pid)"
 }
 

@@ -21,7 +21,10 @@ try {
   bail "Failed to build:\n$msg"
 }
 
-# set pid [start_cabinet]
+if {[file exists cabinet.log]} {
+  file delete cabinet.log
+}
+touch cabinet.log
 
 # Setup constraints
 set constraints {always files dirs boilerplates}
