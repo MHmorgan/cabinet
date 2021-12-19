@@ -111,13 +111,14 @@ pub async fn delete(conn: &Connection, ident: DirIdentifier<'_>) -> Result<usize
 
 /// Return the content of a directory.
 pub async fn content(conn: &Connection, ident: DirIdentifier<'_>) -> Result<Vec<DirContent>> {
-    if !exists(conn, ident.clone()).await? {
-        return Err(CabinetError::NotFound);
-    }
+    let root_dirs = [Path::new(""), Path::new("/")];
+    let found = exists(conn, ident.clone()).await?;
 
     let id = match ident {
-        DirIdentifier::Id(id) => Some(id),
-        DirIdentifier::Path(path) => get_id(conn, path).await?,
+        DirIdentifier::Id(id) if found => Some(id),
+        DirIdentifier::Path(path) if root_dirs.contains(&path) => None,
+        DirIdentifier::Path(path) if found => get_id(conn, path).await?,
+        _ => return Err(CabinetError::NotFound),
     };
 
     let mut dir_stmt = conn.prepare("SELECT * FROM directory WHERE parent IS ? ORDER BY name")?;
