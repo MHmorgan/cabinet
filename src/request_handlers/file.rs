@@ -120,7 +120,7 @@ pub async fn put(
         // If-Unmodified-Since condition
         let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
             let date: HttpDate = val.to_str().unwrap().parse()?;
-            modified < date
+            modified <= date
         } else {
             true
         };
@@ -183,8 +183,8 @@ pub async fn delete(
     req: HttpRequest,
 ) -> Result<HttpResponse> {
     use crate::database::boilerplate::file_used_in_boilerplates;
-    use crate::database::file::{fetch, delete};
-    use crate::database::file::FileIdentifier::{Path, Id};
+    use crate::database::file::FileIdentifier::{Id, Path};
+    use crate::database::file::{delete, fetch};
     use crate::CabinetError::NotFound;
 
     //
@@ -223,7 +223,7 @@ pub async fn delete(
     let modified = HttpDate::from_str(&file.modified)?;
     let unmodified_since = if let Some(val) = headers.get("If-Unmodified-Since") {
         let date = val.to_str().unwrap().parse()?;
-        modified < date
+        modified <= date
     } else {
         true
     };
