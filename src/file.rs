@@ -1,7 +1,6 @@
 use getset::Getters;
 use rusqlite::Row;
 use std::convert::TryFrom;
-use std::path::PathBuf;
 
 /// NewFile contains file data without any database information: no database entry
 /// id or file id.

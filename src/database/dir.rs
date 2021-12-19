@@ -205,7 +205,7 @@ mod tests {
         // Should exist and have directory 0 as parent
         //
         let dir: Directory = fetch(&conn, ident).await?;
-        assert_eq!(dir.parent(), Some(0));
+        assert_eq!(dir.parent, Some(0));
 
         Ok(())
     }
@@ -248,7 +248,7 @@ mod tests {
         create(&conn, "foodir/bardir".as_ref()).await?;
         let d1: Directory = fetch(&conn, ident2.clone()).await?;
         let d2: Directory = fetch(&conn, ident3.clone()).await?;
-        assert_eq!(d2.parent(), Some(d1.id()));
+        assert_eq!(d2.parent, Some(d1.id));
 
         create(&conn, "mydir/foodir".as_ref()).await?;
         let cont = content(&conn, ident1.clone()).await?;
@@ -260,7 +260,7 @@ mod tests {
 
         delete(&conn, ident2.clone()).await?;
         assert!(!exists(&conn, ident2).await?);
-        let ident3 = DirIdentifier::Id(d2.id());
+        let ident3 = DirIdentifier::Id(d2.id);
         assert!(!exists(&conn, ident3).await?);
 
         Ok(())

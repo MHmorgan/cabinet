@@ -6,6 +6,7 @@ use rusqlite::Connection;
 use std::convert::TryFrom;
 use std::path::Path;
 
+#[allow(dead_code)]
 pub async fn exists(conn: &Connection, ident: FileIdentifier<'_>) -> Result<bool> {
     let mut exists = false;
     if let Some(id) = ident.get_id(conn).await? {

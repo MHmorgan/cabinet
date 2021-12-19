@@ -33,6 +33,7 @@ pub async fn fetch(conn: &Connection, ident: BoilerplateIdentifier<'_>) -> Resul
     Ok(bp)
 }
 
+#[allow(dead_code)]
 pub async fn exists(conn: &Connection, ident: BoilerplateIdentifier<'_>) -> Result<bool> {
     let id = ident.get_id(conn).await?;
     let mut found = false;
