@@ -39,12 +39,11 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let m = clap_app!(myapp =>
-        (version: "1.0")
+        (version: "2.0")
         (author: "Magnus Aa. Hirth <magnus.hirth@gmail.com>")
         (about: "Cabinet file server.")
         (@arg IP: +required "IP to bind server to.")
         (@arg PORT: +required "Port to listen on.")
-        (@arg ROOT: +required "Root directory of server data.")
     )
     .get_matches();
 
