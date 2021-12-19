@@ -28,40 +28,21 @@ test file-put-1.0 "PUT request, new file" files {
   http::ncode $tok
 } 201
 
-
-# HEAD request tests
-
-test file-head01-1.0 "HEAD request" files {
-  set tok [head $file(path)]
+test file-get01-1.0 "GET request" files {
+  set tok [get $file(path)]
+  set code [http::ncode $tok]
+  set body [http::data $tok]
   array set headers [http::meta $tok]
   set file(modified) $headers(last-modified)
   set file(etag)     $headers(etag)
   array unset headers
-  http::ncode $tok
-} 200
-
-test file-head02-1.0 "HEAD request, for a directory" files {
-  set tok [head [file dirname $file(path)]]
-  http::ncode $tok
-} 400
-
-test file-head03-1.0 "HEAD request, non-existent file" files {
-  set tok [head files/idontexist.md]
-  http::ncode $tok
-} 404
-
-
-# PUT request tests
+  return "$code $body"
+} "200 $file(content)"
 
 test file-put01-1.0 "PUT request, overwriting file" files {
   set tok [put $file(path) $file(content)]
   http::ncode $tok
 } 204
-
-test file-put02-1.0 "PUT request, for an existing directory" files {
-  set tok [head [file dirname $file(path)]]
-  http::ncode $tok
-} 400
 
 test file-put03-1.0 "PUT request, with valid If-Match header" files {
   set headers [list If-Match $file(etag)]
@@ -86,16 +67,6 @@ test file-put06-1.0 "PUT request, with an older unmodified since value" files {
   set tok [put $file(path) $file(content) $headers]
   http::ncode $tok
 } 412
-
-
-# GET request tests
-
-test file-get01-1.0 "GET request" files {
-  set tok [get $file(path)]
-  set code [http::ncode $tok]
-  set body [http::data $tok]
-  return "$code $body"
-} "200 $file(content)"
 
 test file-get02-1.0 "GET request, with newer modified since value" files {
   set headers [list If-Modified-Since $newer_time]
@@ -126,18 +97,10 @@ test file-get06-1.0 "GET request, with not matching etag" files {
   http::ncode $tok
 } 200
 
-
-# DELETE request tests
-
 test file-delete01-1.0 "DELETE request" files {
   set tok [delete $file(path)]
   http::ncode $tok
 } 204
-
-test file-delete02-1.0 "DELETE request, trying to delete a directory" files {
-  set tok [delete [file dirname $file(path)]]
-  http::ncode $tok
-} 400
 
 test file-delete03-1.0 "DELETE request, non-existent file" files {
   set tok [delete $file(path)]

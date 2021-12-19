@@ -12,3 +12,6 @@ Cargo.lock
 testsrv
 
 *.log
+
+# Test databases
+*.sqlite
