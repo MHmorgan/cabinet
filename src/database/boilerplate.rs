@@ -214,22 +214,37 @@ mod tests {
     #[async_std::test]
     async fn all_boilerplate_functions() -> Result<()> {
         let mut conn = db().await?;
-        let i1 = || BoilerplateIdentifier::Name("db1");
-        let i2 = || BoilerplateIdentifier::Name("db2");
         let mut files = HashMap::new();
         files.insert("myfile".to_string(), "myfile".to_string());
 
-        assert!(!exists(&conn, i1()).await.unwrap());
-        create(
-            &mut conn,
-            NewBoilerplate {
-                name: "db1".into(),
-                script: None,
-                files: files.clone(),
-            },
-        )
-        .await?;
-        assert!(exists(&conn, i1()).await.unwrap());
+        let new_bp = NewBoilerplate {
+            name: "Boilerplate 1".into(),
+            script: None,
+            files: files.clone(),
+        };
+        let name_ident = BoilerplateIdentifier::Name(&new_bp.name);
+
+        assert!(!exists(&conn, name_ident.clone()).await.unwrap());
+        create(&mut conn, new_bp.clone()).await?;
+        assert!(exists(&conn, name_ident.clone()).await.unwrap());
+
+        let mut bp = fetch(&conn, name_ident.clone()).await.unwrap();
+        assert_eq!(new_bp.name, bp.name);
+        assert_eq!(new_bp.script, bp.script);
+        assert_eq!(new_bp.files, bp.files);
+
+        let id_ident = BoilerplateIdentifier::Id(bp.id);
+        bp.name = "Updated Boilerplate".into();
+        bp.script = Some("sudo apt get awesomeness".into());
+        update(&mut conn, bp.clone()).await.unwrap();
+        assert_eq!(bp, fetch(&conn, id_ident.clone()).await.unwrap());
+
+        let names = vec![bp.name];
+        let res = all_names(&conn).await.unwrap();
+        assert_eq!(res, names);
+
+        let res = file_used_in_boilerplates(&conn, 1).await.unwrap();
+        assert_eq!(res, names);
 
         Ok(())
     }
