@@ -27,7 +27,12 @@ if {[file exists cabinet.log]} {
 touch cabinet.log
 
 # Setup constraints
-set constraints {always files dirs boilerplates}
+set constraints {
+  always
+  files
+  dirs
+  boilerplates
+}
 log "Enabled test constraints: $constraints"
 
 tcltest::configure \

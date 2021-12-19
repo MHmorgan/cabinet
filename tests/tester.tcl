@@ -36,6 +36,7 @@ proc teardown_cabinet {} {
     throw {TESTER} "Cabinet PID unknown"
   }
   exec kill -9 $cabinet_pid
+  file delete cabinet.sqlite
   cleanupTests
 }
 

@@ -1,40 +1,20 @@
-use std::path::PathBuf;
-use std::sync::Mutex;
-// use async_std::path::PathBuf;
 
-#[derive(Debug, Default, Clone)]
-struct Context {
-    /// The directory root for all data available for the server.
-    root: PathBuf,
-}
-
-lazy_static! {
-    static ref CTX: Mutex<Context> = {
-        let ctx = Context {
-            ..Default::default()
-        };
-        Mutex::new(ctx)
+#[macro_export]
+macro_rules! return_error {
+    ($($arg:tt)+) => {
+        return Err($crate::CabinetError::Other(format!($($arg)+)))
     };
 }
 
-pub fn init(root: PathBuf) {
-    let mut ctx = CTX.lock().unwrap();
-    ctx.root = root;
-}
+/*******************************************************************************
+ *                                                                             *
+ * HTTP response macros
+ *                                                                             *
+ *******************************************************************************/
 
-pub fn files_dir() -> PathBuf {
-    let ctx = CTX.lock().unwrap();
-    ctx.root.join("files")
-}
-
-pub fn boilerplate_dir() -> PathBuf {
-    let ctx = CTX.lock().unwrap();
-    ctx.root.join("boilerplates")
-}
-
-// -----------------------------------------------------------------------------
-// HTTP response macros
-
+//
+// 304 Not Modified
+//
 #[macro_export]
 macro_rules! not_modified {
     () => {
@@ -51,6 +31,9 @@ macro_rules! not_modified {
     };
 }
 
+//
+// 400 Bad Request
+//
 #[macro_export]
 macro_rules! bad_request {
     () => {
@@ -63,6 +46,9 @@ macro_rules! bad_request {
     };
 }
 
+//
+// 404 Not Found
+//
 #[macro_export]
 macro_rules! not_found {
     () => {
@@ -75,6 +61,9 @@ macro_rules! not_found {
     };
 }
 
+//
+// 412 Precondition Failed
+//
 #[macro_export]
 macro_rules! precondition_failed {
     () => {
@@ -87,6 +76,9 @@ macro_rules! precondition_failed {
     };
 }
 
+//
+// 413 Paiload Too Large
+//
 #[macro_export]
 macro_rules! payload_too_large {
     () => {
@@ -99,6 +91,9 @@ macro_rules! payload_too_large {
     };
 }
 
+//
+// 500 Internal Server Error
+//
 #[macro_export]
 macro_rules! internal_server_error {
     () => {
@@ -110,3 +105,52 @@ macro_rules! internal_server_error {
             .body(format!("500 Internal Server Error: {}", format_args!($($arg)+)))
     };
 }
+
+/*******************************************************************************
+ *                                                                             *
+ * Query helpers
+ *                                                                             *
+ *******************************************************************************/
+
+#[macro_export]
+macro_rules! query_row {
+    ($conn:ident, $query:tt => $func:expr) => {
+        $conn
+            .prepare($query)?
+            .query_row(&[], $func)
+    };
+    ($conn:ident, $query:tt => $func:expr; $($arg:tt),*) => {
+        $conn
+            .prepare($query)?
+            .query_row(params![$($arg)*], $func)
+    };
+}
+
+#[macro_export]
+macro_rules! query_exists {
+    ($conn:ident, $query:tt) => {
+        $conn
+            .prepare($query)?
+            .exists(&[])
+    };
+    ($conn:ident, $query:tt; $($arg:tt),*) => {
+        $conn
+            .prepare($query)?
+            .exists(params![$($arg)*])
+    };
+}
+
+#[macro_export]
+macro_rules! execute {
+    ($conn:ident, $query:tt) => {
+        $conn
+            .prepare($query)?
+            .execute(&[])
+    };
+    ($conn:ident, $query:tt; $($arg:tt),*) => {
+        $conn
+            .prepare($query)?
+            .execute(params![$($arg)*])
+    };
+}
+

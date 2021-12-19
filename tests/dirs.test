@@ -16,8 +16,6 @@ array set dir {
   path           dirs/foodir/bardir
 }
 
-# PUT request tests
-
 test dir-put01-1.0 "PUT request, new directory" dirs {
   set tok [put $dir(path)]
   http::ncode $tok
@@ -28,15 +26,6 @@ test dir-put02-1.0 "PUT request, directory already exists" dirs {
   http::ncode $tok
 } 204
 
-test dir-put03-1.0 "PUT request, resource isn't a directory" dirs {
-  put files/foo.txt
-  set tok [put dirs/foo.txt]
-  http::ncode $tok
-} 400
-
-
-# GET request tests
-
 test dir-get01-1.0 "GET request" dirs {
   set files [regsub {^dirs} $dir(path) files]
   put $files/foo.txt
@@ -44,33 +33,20 @@ test dir-get01-1.0 "GET request" dirs {
   set tok [get $dir(path)]
   set code [http::ncode $tok]
   set body [http::data $tok]
+  delete $files/foo.txt
+  delete $files/bar.txt
   return "$code $body"
 } {200 ["bar.txt","foo.txt"]}
-
-test dir-get02-1.0 "GET request, resource isn't a directory" dirs {
-  put files/foo.txt
-  set tok [get dirs/foo.txt]
-  http::ncode $tok
-} 400
 
 test dir-get03-1.0 "GET request, non-existent directory" dirs {
   set tok [get dirs/idontexist]
   http::ncode $tok
 } 404
 
-
-# DELETE request tests
-
 test dir-delete01-1.0 "DELETE request" dirs {
   set tok [delete $dir(path)]
   http::ncode $tok
 } 204
-
-test dir-delete02-1.0 "DELETE request, resource isn't a directory" dirs {
-  put files/foo.txt
-  set tok [delete dirs/foo.txt]
-  http::ncode $tok
-} 400
 
 test dir-delete03-1.0 "DELETE request, non-existent directory" dirs {
   set tok [delete $dir(path)]
