@@ -63,6 +63,7 @@ async fn main() -> anyhow::Result<()> {
     HttpServer::new(move || {
         App::new()
             .service(request_handlers::file::get)
+            .service(request_handlers::file::head)
             .service(request_handlers::file::put)
             .service(request_handlers::file::delete)
             .service(request_handlers::dir::get)
@@ -92,12 +93,14 @@ quick_error! {
     pub enum CabinetError {
         BadRequest(err: String) {}
         NotFound {}
+        NotModified {}
         PreconditionFailed {}
         PailoadTooLarge {}
         InternalServerError {}
         Other(err: String) {
-            from(err: rusqlite::Error) -> (err.to_string())
+            from(err: actix_web::error::ParseError) -> (err.to_string())
             from(err: anyhow::Error) -> (err.to_string())
+            from(err: rusqlite::Error) -> (err.to_string())
             from(err: serde_json::error::Error) -> (err.to_string())
         }
     }

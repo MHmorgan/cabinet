@@ -1,5 +1,7 @@
+use crate::{CabinetError, CabinetResult};
 use crate::file::{File, NewFile};
 use crate::get_db_conn;
+use actix_web::dev::HttpResponseBuilder;
 use actix_web::http::header::HttpDate;
 use actix_web::http::HeaderMap;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
@@ -8,28 +10,19 @@ use std::str::FromStr;
 
 const MAX_SIZE: usize = 262_144;
 
-#[actix_web::get("/files/{file:.*}")]
-pub async fn get(
-    web::Path(file_path): web::Path<String>,
+async fn head_or_get(
+    file_path: String,
     req: HttpRequest,
-) -> Result<HttpResponse> {
+) -> CabinetResult<(HttpResponseBuilder, Vec<u8>)> {
     use crate::database::file::fetch;
     use crate::database::file::FileIdentifier::Path;
-    use crate::CabinetError::NotFound;
-    use actix_web::http::header::{ContentType, ETag, EntityTag, HttpDate, LastModified};
+    use actix_web::http::header::{ContentType, ETag, EntityTag, LastModified};
 
     //
     // Fetch requested file
     //
     let conn = get_db_conn();
-    let file: File = match fetch(&conn, Path(file_path.as_ref())).await {
-        Ok(f) => f,
-        Err(NotFound) => return Ok(not_found!("{}", &file_path)),
-        Err(e) => {
-            err!("Unexpected error: {}", e);
-            return Ok(internal_server_error!());
-        }
-    };
+    let file: File = fetch(&conn, Path(file_path.as_ref())).await?;
 
     //
     // Prepare response header
@@ -62,10 +55,45 @@ pub async fn get(
         true
     };
     if !modified_since || !none_match {
-        return Ok(not_modified!(resp));
+        return Err(CabinetError::NotModified);
     }
 
-    Ok(resp.body(file.content))
+    Ok((resp, file.content))
+}
+
+#[actix_web::get("/files/{file:.*}")]
+pub async fn get(
+    web::Path(file_path): web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse> {
+    use crate::CabinetError::{NotFound, NotModified};
+    let (mut resp, content) = match head_or_get(file_path.clone(), req).await {
+        Ok(res) => res,
+        Err(NotFound) => return Ok(not_found!("{}", &file_path)),
+        Err(NotModified) => return Ok(not_modified!()),
+        Err(e) => {
+            err!("Failed to get file: {}", e);
+            return Ok(internal_server_error!());
+        }
+    };
+    Ok(resp.body(content))
+}
+
+#[actix_web::head("/files/{file:.*}")]
+pub async fn head(
+    web::Path(file_path): web::Path<String>,
+    req: HttpRequest,
+) -> Result<HttpResponse> {
+    use crate::CabinetError::NotFound;
+    let (mut resp, _) = match head_or_get(file_path.clone(), req).await {
+        Ok(res) => res,
+        Err(NotFound) => return Ok(not_found!("{}", &file_path)),
+        Err(e) => {
+            err!("Failed to get file (head): {}", e);
+            return Ok(internal_server_error!());
+        }
+    };
+    Ok(resp.finish())
 }
 
 #[actix_web::put("/files/{file:.*}")]
