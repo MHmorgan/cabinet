@@ -133,9 +133,9 @@ pub async fn put(
     let res = if let Some(mut bp_entry) = bp_entry {
         bp_entry.script = bp.script;
         bp_entry.files = bp.files;
-        update(&mut conn, bp_entry).await
+        update(&mut conn, &bp_entry).await
     } else {
-        create(&mut conn, bp).await
+        create(&mut conn, &bp).await
     };
     match res {
         Err(BadRequest(txt)) => return Ok(bad_request!("{}", txt)),

@@ -44,7 +44,7 @@ pub async fn exists(conn: &Connection, ident: BoilerplateIdentifier<'_>) -> Resu
     Ok(found)
 }
 
-pub async fn create(conn: &mut Connection, new: NewBoilerplate) -> Result<usize> {
+pub async fn create(conn: &mut Connection, new: &NewBoilerplate) -> Result<usize> {
     use crate::database::file::FileIdentifier::Path;
     use crate::CabinetError::BadRequest;
     use actix_web::http::header::HttpDate;
@@ -70,7 +70,7 @@ pub async fn create(conn: &mut Connection, new: NewBoilerplate) -> Result<usize>
         let mut insert_stmt =
             tx.prepare("INSERT INTO bp_file_map(boilerplate, file, location) VALUES (?, ?, ?)")?;
 
-        for (file_path_client, file_path_server) in new.files {
+        for (file_path_client, file_path_server) in &new.files {
             let p = Path(file_path_server.as_ref());
             let file_id: usize = match p.get_id(&tx).await? {
                 Some(file_id) => file_id,
@@ -89,7 +89,7 @@ pub async fn create(conn: &mut Connection, new: NewBoilerplate) -> Result<usize>
     Ok(bp_id)
 }
 
-pub async fn update(conn: &mut Connection, bp: Boilerplate) -> Result<usize> {
+pub async fn update(conn: &mut Connection, bp: &Boilerplate) -> Result<usize> {
     use crate::database::file::FileIdentifier::Path;
     use crate::CabinetError::BadRequest;
     use actix_web::http::header::HttpDate;
@@ -117,7 +117,7 @@ pub async fn update(conn: &mut Connection, bp: Boilerplate) -> Result<usize> {
         let mut insert_stmt =
             tx.prepare("INSERT INTO bp_file_map(boilerplate, file, location) VALUES (?, ?, ?)")?;
 
-        for (file_path_client, file_path_server) in bp.files {
+        for (file_path_client, file_path_server) in &bp.files {
             let p = Path(file_path_server.as_ref());
             let file_id: usize = match p.get_id(&tx).await? {
                 Some(file_id) => file_id,
@@ -226,7 +226,7 @@ mod tests {
         let name_ident = BoilerplateIdentifier::Name(&new_bp.name);
 
         assert!(!exists(&conn, name_ident.clone()).await.unwrap());
-        create(&mut conn, new_bp.clone()).await?;
+        create(&mut conn, &new_bp).await?;
         assert!(exists(&conn, name_ident.clone()).await.unwrap());
 
         let mut bp = fetch(&conn, name_ident.clone()).await.unwrap();
@@ -237,7 +237,7 @@ mod tests {
         let id_ident = BoilerplateIdentifier::Id(bp.id);
         bp.name = "Updated Boilerplate".into();
         bp.script = Some("sudo apt get awesomeness".into());
-        update(&mut conn, bp.clone()).await.unwrap();
+        update(&mut conn, &bp).await.unwrap();
         assert_eq!(bp, fetch(&conn, id_ident.clone()).await.unwrap());
 
         let names = vec![bp.name];
