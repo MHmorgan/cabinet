@@ -2,9 +2,7 @@
 name = "cabinet"
 version = "1.0.1"
 authors = ["Magnus Hirth <magnus.hirth@gmail.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2021"
 
 [dependencies]
 actix-web = "3.3"
