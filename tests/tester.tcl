@@ -18,14 +18,10 @@ set cabinet_pid  0
 set cabinet_host 0.0.0.0
 set cabinet_port 8083
 set cabinet_log [file normalize cabinet.log]
-set cabinet_dir [file normalize srv]
 
 proc start_cabinet {} {
-  global cabinet_pid cabinet_host cabinet_port cabinet_log cabinet_dir
-  makeDirectory $cabinet_dir
-  makeDirectory files $cabinet_dir
-  makeDirectory boilerplates $cabinet_dir
-  set cabinet_pid [exec [cabinet_bin] $cabinet_host $cabinet_port $cabinet_dir >>& $cabinet_log &]
+  global cabinet_pid cabinet_host cabinet_port cabinet_log
+  set cabinet_pid [exec [cabinet_bin] $cabinet_host $cabinet_port >>& $cabinet_log &]
   log "Started cabinet server (PID $cabinet_pid)"
 }
 
@@ -59,28 +55,6 @@ proc cabinet_url {} {
   return http://$cabinet_host:$cabinet_port
 }
 
-proc cabinet_make_file {path {content {}}} {
-  global cabinet_dir
-  makeFile $content $path $cabinet_dir/files
-}
-
-proc cabinet_make_dir {path {content {}}} {
-  global cabinet_dir
-  makeDirectory $path $cabinet_dir/files
-}
-
-proc cabinet_make_boilerplate {path {content {}}} {
-  global cabinet_dir
-  makeFile $content $path $cabinet_dir/boilerplates
-}
-
-proc cabinet_clean {} {
-  global cabinet_dir
-  removeDirectory files        $cabinet_dir
-  removeDirectory boilerplates $cabinet_dir
-  makeDirectory   files        $cabinet_dir
-  makeDirectory   boilerplates $cabinet_dir
-}
 
 ################################################################################
 #                                                                              #
