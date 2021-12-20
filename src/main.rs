@@ -126,7 +126,7 @@ pub type CabinetResult<T> = std::result::Result<T, CabinetError>;
  *******************************************************************************/
 
 async fn migrate(root: &std::path::Path) -> anyhow::Result<()> {
-    use mhlog::{info, warn, err};
+    use mhlog::{info, warn};
     use std::path::{Path, PathBuf};
     use crate::database::file::{create, exists};
     use crate::database::file::FileIdentifier::Path as PathId;
@@ -160,20 +160,22 @@ async fn migrate(root: &std::path::Path) -> anyhow::Result<()> {
             vec![path.into()]
         }
     }
-    let files = find_files(&root.join("files"), "files");
+    let file_dir = root.join("files");
+    let files = find_files(&file_dir, "files");
     info!("Found {} files.", files.len());
 
     //
     // Migrate files
     //
     for f in files {
-        if exists(&conn, PathId(&f)).await? {
-            warn!("File already exists: {:?}", &f);
+        let path = f.strip_prefix(&file_dir)?;
+        if exists(&conn, PathId(path)).await? {
+            warn!("File already exists: {:?}", path);
             continue
         }
-        info!("Migrating {:?}", &f);
+        info!("Migrating {:?}", path);
         let new_file = NewFile {
-            path: f.to_string_lossy().into(),
+            path: path.to_string_lossy().into(),
             content: read(&f)?,
             mode: 0o644,
             modified: date.to_string(),
@@ -184,16 +186,17 @@ async fn migrate(root: &std::path::Path) -> anyhow::Result<()> {
     //
     // Find all boilerplates
     //
-    let bps = find_files(&root.join("boilerplates"), "boilerplates");
+    let bp_dir = root.join("boilerplates");
+    let bps = find_files(&bp_dir, "boilerplates");
     info!("Found {} boilerplates.", bps.len());
 
     //
     // Migrate boilerplates
     //
     for bp in bps {
-        let name: String = bp.to_string_lossy().into();
+        let name: String = bp.strip_prefix(&bp_dir)?.to_string_lossy().into();
         if bp_exists(&conn, Name(&name)).await? {
-            warn!("Boilerplate already exists: {:?}", &bp);
+            warn!("Boilerplate already exists: {:?}", &name);
             continue
         }
         let new_bp = NewBoilerplate {
