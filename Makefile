@@ -1,5 +1,6 @@
 
 test:
+	cargo test --release
 	./tests/main.tcl
 
 test-db:
