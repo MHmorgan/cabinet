@@ -6,6 +6,12 @@ use rusqlite::Connection;
 use std::convert::TryFrom;
 use std::path::Path;
 
+pub async fn count(conn: &Connection) -> Result<usize> {
+    let mut stmt = conn.prepare("SELECT count(*) FROM file")?;
+    let count = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
 #[allow(dead_code)]
 pub async fn exists(conn: &Connection, ident: FileIdentifier<'_>) -> Result<bool> {
     let mut exists = false;

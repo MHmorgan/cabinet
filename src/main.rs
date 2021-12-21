@@ -84,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
             .service(request_handlers::boilerplate::get)
             .service(request_handlers::boilerplate::put)
             .service(request_handlers::boilerplate::delete)
+            .service(request_handlers::status::get)
             .wrap(Logger::default())
     })
     .bind((ip, port))?

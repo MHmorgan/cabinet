@@ -3,6 +3,12 @@ use crate::{CabinetError, CabinetResult as Result};
 use rusqlite::Connection;
 use std::convert::TryFrom;
 
+pub async fn count(conn: &Connection) -> Result<usize> {
+    let mut stmt = conn.prepare("SELECT count(*) FROM boilerplate")?;
+    let count = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
 pub async fn all_names(conn: &Connection) -> Result<Vec<String>> {
     let mut stmt = conn.prepare("SELECT DISTINCT name FROM boilerplate")?;
     let mut names = Vec::new();

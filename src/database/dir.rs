@@ -24,6 +24,12 @@ impl std::fmt::Display for DirContent {
     }
 }
 
+pub async fn count(conn: &Connection) -> Result<usize> {
+    let mut stmt = conn.prepare("SELECT count(*) FROM directory")?;
+    let count = stmt.query_row([], |row| row.get(0))?;
+    Ok(count)
+}
+
 /// Fetch a directory from the database.
 pub async fn fetch(conn: &Connection, ident: DirIdentifier<'_>) -> Result<Directory> {
     let id = match ident {
